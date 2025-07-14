@@ -1,3 +1,4 @@
+from keep_alive import keep_alive
 import os
 import requests
 import subprocess
@@ -52,4 +53,5 @@ app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
 
 print("✅ הבוט פועל – שלח טקסט והוא יושמע בשלוחה")
+keep_alive()
 app.run_polling()
