@@ -6,7 +6,7 @@ from gtts import gTTS
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = '8007934043:AAHEU8h_Wslm5jfhjE3DTNMbpgGEJnzlyAI'
+BOT_TOKEN = '8007934043:AAE3i7WmKrfN-MTBxry8LuEJ-QUY3b1QCNY'
 YMOT_TOKEN = '0733181406:80809090'
 YMOT_PATH = 'ivr2:2/'
 
