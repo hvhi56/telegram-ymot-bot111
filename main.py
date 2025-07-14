@@ -39,13 +39,12 @@ def upload_to_ymot(wav_file_path):
     print("תשובת ימות:", response.text)
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-if update.message and update.message.text:
+    if not update.message or not update.message.text:
+        print("⚠️ התקבלה הודעה לא טקסטואלית – מתעלם")
+        return
+
     text = update.message.text
-    print("טקסט שהתקבל:", text)
-    # המשך ההמרה והעלאה...
-else:
-    print("התקבל עדכון לא טקסטואלי — מדלגים")
-    print("טקסט שהתקבל:", text)
+    print("✅ טקסט שהתקבל:", text)
 
     text_to_mp3(text)
     convert_to_wav('output.mp3', 'output.wav')
@@ -53,6 +52,7 @@ else:
 
     os.remove('output.mp3')
     os.remove('output.wav')
+
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
