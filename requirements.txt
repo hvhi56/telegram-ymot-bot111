@@ -1,4 +1,4 @@
-requests
-gTTS
-python-telegram-bot==20.3
 flask
+requests
+python-telegram-bot==20.0
+google-cloud-texttospeech
