@@ -53,10 +53,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.remove('output.mp3')
     os.remove('output.wav')
 
+keep_alive()
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
 
 print("✅ הבוט פועל – שלח טקסט והוא יושמע בשלוחה")
-keep_alive()
 app.run_polling()
