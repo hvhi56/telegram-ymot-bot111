@@ -39,7 +39,12 @@ def upload_to_ymot(wav_file_path):
     print("תשובת ימות:", response.text)
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+if update.message and update.message.text:
     text = update.message.text
+    print("טקסט שהתקבל:", text)
+    # המשך ההמרה והעלאה...
+else:
+    print("התקבל עדכון לא טקסטואלי — מדלגים")
     print("טקסט שהתקבל:", text)
 
     text_to_mp3(text)
