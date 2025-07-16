@@ -31,10 +31,11 @@ def text_to_mp3(text, filename='output.mp3'):
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="he-IL",
-        name="he-IL-Uri",
-        ssml_gender=texttospeech.SsmlVoiceGender.MALE
+voice = texttospeech.VoiceSelectionParams(
+    language_code="he-IL",
+    name="he-IL-Matei",  # קול גברי תקין
+    ssml_gender=texttospeech.SsmlVoiceGender.MALE
+
     )
 
     audio_config = texttospeech.AudioConfig(
