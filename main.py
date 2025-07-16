@@ -34,10 +34,9 @@ print("🟢 Voice being sent:", voice.name)
 
 voice = texttospeech.VoiceSelectionParams(
     language_code="he-IL",
-    name="he-IL-Wavenet-A",  # קול קיים בעברית
-    ssml_gender=texttospeech.SsmlVoiceGender.MALE
-
-    )
+    name="he-IL-Wavenet-A", 
+    ssml_gender=texttospeech.SsmlVoiceGender.MALE  # או FEMALE לפי בחירה
+)
 
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
