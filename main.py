@@ -30,6 +30,9 @@ def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
 print("🟢 Voice being sent:", voice.name)
 
+print("🟢 DEBUG — voice.name:", voice.name)
+print("🟢 DEBUG — voice.language_code:", voice.language_code)
+
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
 voice = texttospeech.VoiceSelectionParams(
