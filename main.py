@@ -6,10 +6,14 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
-# 🔑 טעינת מפתח Google TTS מקובץ סביבה
-key_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
-with open("google_key.json", "w") as f:
-    f.write(key_json)
+import os
+import base64
+
+# קריאת קובץ JSON מקודד
+key_b64 = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_B64")
+with open("google_key.json", "wb") as f:
+    f.write(base64.b64decode(key_b64))
+
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google_key.json"
 
 # 🛠 משתני סביבה מה-Render
