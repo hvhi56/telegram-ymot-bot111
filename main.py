@@ -13,7 +13,7 @@ with open("google_key.json", "w") as f:
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google_key.json"
 
 # 🛠 משתני סביבה מה-Render
-BOT_TOKEN = '8007934043:AAFKq2Iar3zqM8Juaod9DR90lowAAtSTCx0'
+BOT_TOKEN = '8007934043:AAFoYqnVQ_vzYeuw5pwQDziyXP-jvGdK5DY'
 YMOT_TOKEN = '0733181406:80809090'
 YMOT_PATH = 'ivr2:2/'
 
