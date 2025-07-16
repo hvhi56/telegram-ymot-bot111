@@ -27,23 +27,24 @@ YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 
 # 🎤 Google TTS
 def text_to_mp3(text, filename='output.mp3'):
-    client = texttospeech.TextToSpeechClient()
-print("🟢 Voice being sent:", voice.name)
+    print("✅ THIS IS THE CORRECT VERSION OF text_to_mp3")  # בדיקת וידוא
 
-print("🟢 DEBUG — voice.name:", voice.name)
-print("🟢 DEBUG — voice.language_code:", voice.language_code)
+    client = texttospeech.TextToSpeechClient()
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
-voice = texttospeech.VoiceSelectionParams(
-    language_code="he-IL",
-    name="he-IL-Wavenet-A", 
-    ssml_gender=texttospeech.SsmlVoiceGender.MALE  # או FEMALE לפי בחירה
-)
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="he-IL",
+        name="he-IL-Wavenet-A",
+        ssml_gender=texttospeech.SsmlVoiceGender.MALE
+    )
+
+    print("🟢 DEBUG — voice.name:", voice.name)
+    print("🟢 DEBUG — voice.language_code:", voice.language_code)
 
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=1.2  # מהירות מוגברת
+        speaking_rate=1.2
     )
 
     response = client.synthesize_speech(
@@ -54,6 +55,7 @@ voice = texttospeech.VoiceSelectionParams(
 
     with open(filename, "wb") as out:
         out.write(response.audio_content)
+        
 
 # 🎧 המרה ל־WAV בפורמט של ימות
 def convert_to_wav(input_file, output_file='output.wav'):
