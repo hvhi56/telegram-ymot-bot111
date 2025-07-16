@@ -28,6 +28,7 @@ YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 # 🎤 Google TTS
 def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
+print("🟢 Voice being sent:", voice.name)
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
