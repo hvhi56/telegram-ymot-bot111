@@ -5,6 +5,7 @@ import requests
 import base64
 from datetime import datetime
 import pytz
+import asyncio
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
@@ -58,6 +59,13 @@ def num_to_hebrew_words(hour, minute):
     hour_12 = hour % 12 or 12
     return f"{hours_map[hour_12]} {minutes_map[minute]}"
 
+# 🧠 יוצר טקסט מלא כולל שעה
+def create_full_text(text):
+    tz = pytz.timezone('Asia/Jerusalem')
+    now = datetime.now(tz)
+    hebrew_time = num_to_hebrew_words(now.hour, now.minute)
+    return f"{hebrew_time} במבזקים פלוס. {text}"
+
 # 🎤 יצירת MP3 עם Google TTS
 def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
@@ -66,7 +74,7 @@ def text_to_mp3(text, filename='output.mp3'):
 
     voice = texttospeech.VoiceSelectionParams(
         language_code="he-IL",
-        name="he-IL-Wavenet-B",  # קול גברי
+        name="he-IL-Wavenet-B",
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
 
@@ -105,20 +113,16 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# 🧠 פונקציה לעיבוד טקסט עם תוספת שעה
-def create_full_text(raw_text):
-    tz = pytz.timezone('Asia/Jerusalem')
-    now = datetime.now(tz)
-    hebrew_time = num_to_hebrew_words(now.hour, now.minute)
-    return f"{hebrew_time} במבזקים פלוס. {raw_text}"
-
-# 🤖 טיפול בכל הודעה עם טקסט או קובץ
+# 📥 טיפול בהודעות
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message:
         return
 
     text = message.text or message.caption
+    has_video = message.video is not None
+
+    # ⏱️ שלב 1: טקסט
     if text:
         full_text = create_full_text(text)
         text_to_mp3(full_text, "output.mp3")
@@ -127,7 +131,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove("output.mp3")
         os.remove("output.wav")
 
-    if message.video:
+        # דילוג קל להבטיח סדר השמעה
+        if has_video:
+            await asyncio.sleep(9)
+
+    # ⏱️ שלב 2: וידאו
+    if has_video:
         video_file = await message.video.get_file()
         await video_file.download_to_drive("video.mp4")
         convert_to_wav("video.mp4", "video.wav")
@@ -141,7 +150,7 @@ keep_alive()
 
 # ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.ALL, handle_message))
+app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_message))
 
-print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו בטלגרם והוא יושמע בשלוחה 🎧")
+print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו – והוא יוקרא ויושמע בשלוחה 🎧")
 app.run_polling()
