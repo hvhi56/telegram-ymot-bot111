@@ -3,15 +3,15 @@ import json
 import subprocess
 import requests
 import base64
-import pytz
 from datetime import datetime
+import pytz
+
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
-# 🟡 1. כתיבת מפתח JSON מקודד
+# 🟡 כתיבת קובץ מפתח Google מ־BASE64
 key_b64 = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_B64")
-
 if not key_b64:
     raise Exception("❌ משתנה GOOGLE_APPLICATION_CREDENTIALS_B64 לא מוגדר או ריק")
 
@@ -22,20 +22,43 @@ try:
 except Exception as e:
     raise Exception("❌ נכשל בכתיבת קובץ JSON מ־BASE64: " + str(e))
 
-# 🛠 משתנים מהסביבה
+# 🛠 משתנים מ־Render
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 YMOT_TOKEN = os.getenv("YMOT_TOKEN")
 YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 
-# ⏰ יצירת טקסט זמן בעברית
-def hebrew_time_string():
-    tz = pytz.timezone('Asia/Jerusalem')
-    now = datetime.now(tz)
-    hour = str(now.hour)
-    minute = str(now.minute).zfill(2)
-    return f"{hour} {minute}"
+# 🔢 המרת מספרים לעברית
+def num_to_hebrew_words(hour, minute):
+    hours_map = {
+        1: "אחת", 2: "שתיים", 3: "שלוש", 4: "ארבע", 5: "חמש",
+        6: "שש", 7: "שבע", 8: "שמונה", 9: "תשע", 10: "עשר",
+        11: "אחת עשרה", 12: "שתים עשרה"
+    }
 
-# 🎤 Google TTS
+    minutes_map = {
+        0: "אפס", 1: "אחת", 2: "שתיים", 3: "שלוש", 4: "ארבע", 5: "חמש",
+        6: "שש", 7: "שבע", 8: "שמונה", 9: "תשע", 10: "עשר",
+        11: "אחת עשרה", 12: "שתים עשרה", 13: "שלוש עשרה", 14: "ארבע עשרה",
+        15: "חמש עשרה", 16: "שש עשרה", 17: "שבע עשרה", 18: "שמונה עשרה",
+        19: "תשע עשרה", 20: "עשרים", 21: "עשרים ואחת", 22: "עשרים ושתיים",
+        23: "עשרים ושלוש", 24: "עשרים וארבע", 25: "עשרים וחמש", 26: "עשרים ושש",
+        27: "עשרים ושבע", 28: "עשרים ושמונה", 29: "עשרים ותשע", 30: "שלושים",
+        31: "שלושים ואחת", 32: "שלושים ושתיים", 33: "שלושים ושלוש",
+        34: "שלושים וארבע", 35: "שלושים וחמש", 36: "שלושים ושש",
+        37: "שלושים ושבע", 38: "שלושים ושמונה", 39: "שלושים ותשע",
+        40: "ארבעים", 41: "ארבעים ואחת", 42: "ארבעים ושתיים",
+        43: "ארבעים ושלוש", 44: "ארבעים וארבע", 45: "ארבעים וחמש",
+        46: "ארבעים ושש", 47: "ארבעים ושבע", 48: "ארבעים ושמונה",
+        49: "ארבעים ותשע", 50: "חמישים", 51: "חמישים ואחת",
+        52: "חמישים ושתיים", 53: "חמישים ושלוש", 54: "חמישים וארבע",
+        55: "חמישים וחמש", 56: "חמישים ושש", 57: "חמישים ושבע",
+        58: "חמישים ושמונה", 59: "חמישים ותשע"
+    }
+
+    hour_12 = hour % 12 or 12
+    return f"{hours_map[hour_12]} {minutes_map[minute]}"
+
+# 🎤 יצירת MP3 עם Google TTS
 def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
 
@@ -43,7 +66,7 @@ def text_to_mp3(text, filename='output.mp3'):
 
     voice = texttospeech.VoiceSelectionParams(
         language_code="he-IL",
-        name="he-IL-Wavenet-B",
+        name="he-IL-Wavenet-B",  # קול גברי
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
 
@@ -61,7 +84,7 @@ def text_to_mp3(text, filename='output.mp3'):
     with open(filename, "wb") as out:
         out.write(response.audio_content)
 
-# 🎧 המרה ל־WAV בפורמט של ימות
+# 🎧 המרה ל־WAV בפורמט ימות
 def convert_to_wav(input_file, output_file='output.wav'):
     subprocess.run([
         'ffmpeg', '-i', input_file, '-ar', '8000', '-ac', '1', '-f', 'wav',
@@ -82,20 +105,21 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# 📩 טיפול בטקסטים מהטלגרם
+# 🤖 טיפול בהודעות טקסט מהבוט
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         print("⚠️ התקבלה הודעה לא טקסטואלית – מדלג")
         return
 
-    original_text = update.message.text
-    print("✅ טקסט שהתקבל:", original_text)
+    text = update.message.text
+    print("✅ טקסט שהתקבל:", text)
 
-    time_prefix = hebrew_time_string()
-    line_name = "במבזקים פלוס"
-    full_text = f"{time_prefix} {line_name}. {original_text}"
+    # ⏰ שעה לפי שעון ישראל
+    tz = pytz.timezone('Asia/Jerusalem')
+    now = datetime.now(tz)
+    hebrew_time = num_to_hebrew_words(now.hour, now.minute)
 
-    print("🗣️ טקסט עם הקדמה:", full_text)
+    full_text = f"{hebrew_time} במבזקים פלוס. {text}"
 
     text_to_mp3(full_text)
     convert_to_wav('output.mp3', 'output.wav')
@@ -104,11 +128,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.remove('output.mp3')
     os.remove('output.wav')
 
-# 🔁 שמירה על פעילות
+# ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
 keep_alive()
 
-# 🤖 הפעלת הבוט
+# ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
 
