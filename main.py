@@ -3,6 +3,7 @@ import json
 import subprocess
 import requests
 import base64
+import pytz
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
@@ -28,7 +29,8 @@ YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 
 # ⏰ יצירת טקסט זמן בעברית
 def hebrew_time_string():
-    now = datetime.now()
+    tz = pytz.timezone('Asia/Jerusalem')
+    now = datetime.now(tz)
     hour = str(now.hour)
     minute = str(now.minute).zfill(2)
     return f"{hour} {minute}"
