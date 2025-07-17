@@ -3,6 +3,7 @@ import json
 import subprocess
 import requests
 import base64
+from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
@@ -20,15 +21,20 @@ try:
 except Exception as e:
     raise Exception("❌ נכשל בכתיבת קובץ JSON מ־BASE64: " + str(e))
 
-# 🛠 משתנים מהסביבה (מוגדרים ב־Render)
+# 🛠 משתנים מהסביבה
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 YMOT_TOKEN = os.getenv("YMOT_TOKEN")
 YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 
+# ⏰ יצירת טקסט זמן בעברית
+def hebrew_time_string():
+    now = datetime.now()
+    hour = str(now.hour)
+    minute = str(now.minute).zfill(2)
+    return f"{hour} {minute}"
+
 # 🎤 Google TTS
 def text_to_mp3(text, filename='output.mp3'):
-    print("✅ THIS IS THE CORRECT VERSION OF text_to_mp3")  # בדיקת וידוא
-
     client = texttospeech.TextToSpeechClient()
 
     synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -38,9 +44,6 @@ def text_to_mp3(text, filename='output.mp3'):
         name="he-IL-Wavenet-B",
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
-
-    print("🟢 DEBUG — voice.name:", voice.name)
-    print("🟢 DEBUG — voice.language_code:", voice.language_code)
 
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
@@ -55,7 +58,6 @@ def text_to_mp3(text, filename='output.mp3'):
 
     with open(filename, "wb") as out:
         out.write(response.audio_content)
-        
 
 # 🎧 המרה ל־WAV בפורמט של ימות
 def convert_to_wav(input_file, output_file='output.wav'):
@@ -84,17 +86,23 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("⚠️ התקבלה הודעה לא טקסטואלית – מדלג")
         return
 
-    text = update.message.text
-    print("✅ טקסט שהתקבל:", text)
+    original_text = update.message.text
+    print("✅ טקסט שהתקבל:", original_text)
 
-    text_to_mp3(text)
+    time_prefix = hebrew_time_string()
+    line_name = "במבזקים פלוס"
+    full_text = f"{time_prefix} {line_name}. {original_text}"
+
+    print("🗣️ טקסט עם הקדמה:", full_text)
+
+    text_to_mp3(full_text)
     convert_to_wav('output.mp3', 'output.wav')
     upload_to_ymot('output.wav')
 
     os.remove('output.mp3')
     os.remove('output.wav')
 
-# 🔁 הפעלת שרת Flask לשמירה על חיים
+# 🔁 שמירה על פעילות
 from keep_alive import keep_alive
 keep_alive()
 
