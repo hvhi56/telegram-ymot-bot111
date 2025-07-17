@@ -122,20 +122,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = message.text or message.caption
     has_video = message.video is not None
 
-    # ⏱️ שלב 1: טקסט
-    if text:
-        full_text = create_full_text(text)
-        text_to_mp3(full_text, "output.mp3")
-        convert_to_wav("output.mp3", "output.wav")
-        upload_to_ymot("output.wav")
-        os.remove("output.mp3")
-        os.remove("output.wav")
-
-        # דילוג קל להבטיח סדר השמעה
-        if has_video:
-            await asyncio.sleep(9)
-
-    # ⏱️ שלב 2: וידאו
+    # 🟩 שלב 1 – קודם וידאו כדי שיגיע ראשון לשלוחה
     if has_video:
         video_file = await message.video.get_file()
         await video_file.download_to_drive("video.mp4")
@@ -143,6 +130,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         upload_to_ymot("video.wav")
         os.remove("video.mp4")
         os.remove("video.wav")
+
+        await asyncio.sleep(2)  # שהייה קצרה להבטחת סדר
+
+    # 🟩 שלב 2 – טקסט (יגיע אחרון = יושמע ראשון)
+    if text:
+        full_text = create_full_text(text)
+        text_to_mp3(full_text, "output.mp3")
+        convert_to_wav("output.mp3", "output.wav")
+        upload_to_ymot("output.wav")
+        os.remove("output.mp3")
+        os.remove("output.wav")
 
 # ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
