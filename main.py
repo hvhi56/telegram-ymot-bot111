@@ -107,40 +107,44 @@ def upload_to_ymot(wav_file_path):
 # 🤖 טיפול בהודעות טקסט/וידאו מהבוט
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
-        print("⚠️ הודעה ריקה – מדלג")
+        print("⚠️ התקבלה הודעה ריקה – מדלג")
         return
 
     text = update.message.text or update.message.caption
     if not text:
-        print("⚠️ אין טקסט או כיתוב – מדלג")
+        print("⚠️ אין טקסט בהודעה – מדלג")
         return
 
-    # אם יש וידאו – להעלות אותו לשלוחה במקום לקרוא טקסט
-    if update.message.video:
-        print("🎥 התקבל וידאו – מוריד ומעלה לשלוחה")
-        video_file = await update.message.video.get_file()
-        video_path = "video.mp4"
-        await video_file.download_to_drive(video_path)
+    print("✅ טקסט שהתקבל:", text)
 
-        convert_to_wav(video_path, 'output.wav')
-        upload_to_ymot('output.wav')
-
-        os.remove(video_path)
-        os.remove('output.wav')
-        return
-
-    # ⏰ זמן ישראל
+    # ⏰ שעה לפי שעון ישראל
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
 
     full_text = f"{hebrew_time} במבזקים פלוס. {text}"
+
+    # 🎤 הקראת טקסט עם TTS
     text_to_mp3(full_text)
     convert_to_wav('output.mp3', 'output.wav')
     upload_to_ymot('output.wav')
 
     os.remove('output.mp3')
     os.remove('output.wav')
+
+    # 🎥 אם יש וידאו – המרה ושליחה לשלוחה
+    if update.message.video:
+        print("🎥 התקבל וידאו – מוריד וממיר")
+
+        video_file = await update.message.video.get_file()
+        video_path = "video.mp4"
+        await video_file.download_to_drive(video_path)
+
+        convert_to_wav(video_path, 'video.wav')
+        upload_to_ymot('video.wav')
+
+        os.remove(video_path)
+        os.remove('video.wav')
 
 # ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
