@@ -34,7 +34,6 @@ def num_to_hebrew_words(hour, minute):
         6: "שש", 7: "שבע", 8: "שמונה", 9: "תשע", 10: "עשר",
         11: "אחת עשרה", 12: "שתים עשרה"
     }
-
     minutes_map = {
         0: "אפס", 1: "ודקה", 2: "ושתי דקות", 3: "ושלוש דקות", 4: "וארבע דקות", 5: "וחמש דקות",
         6: "ושש דקות", 7: "ושבע דקות", 8: "ושמונה דקות", 9: "ותשע דקות", 10: "ועשרה",
@@ -105,22 +104,37 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# 🤖 טיפול בהודעות טקסט מהבוט
+# 🤖 טיפול בהודעות טקסט/וידאו מהבוט
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        print("⚠️ התקבלה הודעה לא טקסטואלית – מדלג")
+    if not update.message:
+        print("⚠️ הודעה ריקה – מדלג")
         return
 
-    text = update.message.text
-    print("✅ טקסט שהתקבל:", text)
+    text = update.message.text or update.message.caption
+    if not text:
+        print("⚠️ אין טקסט או כיתוב – מדלג")
+        return
 
-    # ⏰ שעה לפי שעון ישראל
+    # אם יש וידאו – להעלות אותו לשלוחה במקום לקרוא טקסט
+    if update.message.video:
+        print("🎥 התקבל וידאו – מוריד ומעלה לשלוחה")
+        video_file = await update.message.video.get_file()
+        video_path = "video.mp4"
+        await video_file.download_to_drive(video_path)
+
+        convert_to_wav(video_path, 'output.wav')
+        upload_to_ymot('output.wav')
+
+        os.remove(video_path)
+        os.remove('output.wav')
+        return
+
+    # ⏰ זמן ישראל
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
 
     full_text = f"{hebrew_time} במבזקים פלוס. {text}"
-
     text_to_mp3(full_text)
     convert_to_wav('output.mp3', 'output.wav')
     upload_to_ymot('output.wav')
@@ -134,7 +148,7 @@ keep_alive()
 
 # ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
+app.add_handler(MessageHandler(filters.TEXT | filters.VIDEO, handle_text))
 
-print("🚀 הבוט עלה! שלח טקסט בטלגרם והוא יושמע בשלוחה 🎧")
+print("🚀 הבוט עלה! שלח טקסט או וידאו והוא יושמע בשלוחה 🎧")
 app.run_polling()
