@@ -110,8 +110,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("⚠️ התקבלה הודעה ריקה – מדלג")
         return
 
-    # 📝 טקסט רגיל או caption (במקרה של מדיה)
-    text = update.message.text or update.message.caption
+    message = update.message
+
+    # 📝 נשלף את הטקסט - אם caption או טקסט רגיל
+    text = message.text or message.caption
     if not text:
         print("⚠️ אין טקסט בהודעה – מדלג")
         return
@@ -122,16 +124,31 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
-
     full_text = f"{hebrew_time} במבזקים פלוס. {text}"
 
     # 🎤 קודם מקריאים את הטקסט עם Google TTS
     text_to_mp3(full_text)
     convert_to_wav('output.mp3', 'output.wav')
     upload_to_ymot('output.wav')
-
     os.remove('output.mp3')
     os.remove('output.wav')
+
+    # 🎥 אם יש וידאו – נוריד ונמיר
+    if message.video:
+        print("🎥 התקבל וידאו – מוריד וממיר")
+        video_file = await message.video.get_file()
+        video_path = "video.mp4"
+        await video_file.download_to_drive(video_path)
+
+        convert_to_wav(video_path, 'video.wav')
+        upload_to_ymot('video.wav')
+
+        os.remove(video_path)
+        os.remove('video.wav')
+
+    # 🖼 אם יש תמונה – לא עושים איתה כלום (אבל כבר הקריאו את הטקסט!)
+    if message.photo:
+        print("🖼 התקבלה תמונה – אין פעולה נדרשת (הטקסט כבר הוקרא)")
 
     # 🎥 רק לאחר מכן – אם יש וידאו – ממירים גם אותו
     if update.message.video:
