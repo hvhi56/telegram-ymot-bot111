@@ -5,13 +5,12 @@ import requests
 import base64
 from datetime import datetime
 import pytz
-import asyncio
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
-# כתיבת קובץ מפתח Google מ־BASE64
+# 🟡 כתיבת קובץ מפתח Google מ־BASE64
 key_b64 = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_B64")
 if not key_b64:
     raise Exception("❌ משתנה GOOGLE_APPLICATION_CREDENTIALS_B64 לא מוגדר או ריק")
@@ -23,12 +22,11 @@ try:
 except Exception as e:
     raise Exception("❌ נכשל בכתיבת קובץ JSON מ־BASE64: " + str(e))
 
-# משתנים מ־Render
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 YMOT_TOKEN = os.getenv("YMOT_TOKEN")
 YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 
-# המרת מספרים לעברית
+# 🔢 המרת שעה לעברית
 def num_to_hebrew_words(hour, minute):
     hours_map = {
         1: "אחת", 2: "שתיים", 3: "שלוש", 4: "ארבע", 5: "חמש",
@@ -39,27 +37,16 @@ def num_to_hebrew_words(hour, minute):
     minutes_map = {
         0: "אפס", 1: "ודקה", 2: "ושתי דקות", 3: "ושלוש דקות", 4: "וארבע דקות", 5: "וחמש דקות",
         6: "ושש דקות", 7: "ושבע דקות", 8: "ושמונה דקות", 9: "ותשע דקות", 10: "ועשרה",
-        11: "ואחת עשרה דקות", 12: "ושתים עשרה דקות", 13: "ושלוש עשרה דקות", 14: "וארבע עשרה דקות",
-        15: "וחמש עשרה דקות", 16: "ושש עשרה דקות", 17: "ושבע עשרה דקות", 18: "ושמונה עשרה דקות",
-        19: "ותשע עשרה דקות", 20: "ועשרים", 21: "עשרים ואחת", 22: "עשרים ושתיים",
-        23: "עשרים ושלוש", 24: "עשרים וארבע", 25: "עשרים וחמש", 26: "עשרים ושש",
-        27: "עשרים ושבע", 28: "עשרים ושמונה", 29: "עשרים ותשע", 30: "וחצי",
-        31: "שלושים ואחת", 32: "שלושים ושתיים", 33: "שלושים ושלוש",
-        34: "שלושים וארבע", 35: "שלושים וחמש", 36: "שלושים ושש",
-        37: "שלושים ושבע", 38: "שלושים ושמונה", 39: "שלושים ותשע",
-        40: "וארבעים דקות", 41: "ארבעים ואחת", 42: "ארבעים ושתיים",
-        43: "ארבעים ושלוש", 44: "ארבעים וארבע", 45: "ארבעים וחמש",
-        46: "ארבעים ושש", 47: "ארבעים ושבע", 48: "ארבעים ושמונה",
-        49: "ארבעים ותשע", 50: "וחמישים דקות", 51: "חמישים ואחת",
-        52: "חמישים ושתיים", 53: "חמישים ושלוש", 54: "חמישים וארבע",
-        55: "חמישים וחמש", 56: "חמישים ושש", 57: "חמישים ושבע",
-        58: "חמישים ושמונה", 59: "חמישים ותשע"
+        15: "ורבע", 30: "וחצי", 45: "ורבע ל"
     }
 
     hour_12 = hour % 12 or 12
-    return f"{hours_map[hour_12]} {minutes_map[minute]}"
+    base = hours_map.get(hour_12, str(hour_12))
+    suffix = minutes_map.get(minute, f"ו{minute} דקות")
 
-# יצירת MP3 עם Google TTS
+    return f"{base} {suffix}"
+
+# 🎤 יצירת MP3 מהטקסט
 def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -80,20 +67,14 @@ def text_to_mp3(text, filename='output.mp3'):
     with open(filename, "wb") as out:
         out.write(response.audio_content)
 
-# המרה ל־WAV בפורמט ימות
+# 🎧 המרה ל־WAV
 def convert_to_wav(input_file, output_file='output.wav'):
     subprocess.run([
         'ffmpeg', '-i', input_file, '-ar', '8000', '-ac', '1', '-f', 'wav',
         output_file, '-y'
     ])
 
-# מיזוג שני קבצי WAV לרצף אחד
-def merge_wav_files(wav1, wav2, output):
-    subprocess.run([
-        'ffmpeg', '-y', '-i', f"concat:{wav1}|{wav2}", '-acodec', 'copy', output
-    ])
-
-# העלאה לשלוחה
+# 📤 העלאה לשלוחה
 def upload_to_ymot(wav_file_path):
     url = 'https://call2all.co.il/ym/api/UploadFile'
     with open(wav_file_path, 'rb') as f:
@@ -105,45 +86,53 @@ def upload_to_ymot(wav_file_path):
             'autoNumbering': 'true'
         }
         response = requests.post(url, data=data, files=files)
-    print("📞 תגובת ימות:", response.text)
+        print("📞 תגובת ימות:", response.text)
 
-# טיפול בהודעות טקסט עם או בלי מדיה
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# 🤖 טיפול בהודעות
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message:
         return
 
-    text = message.text or ""
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
-    full_text = f"{hebrew_time} במבזקים פלוס. {text}"
 
-    text_to_mp3(full_text)
-    convert_to_wav('output.mp3', 'text.wav')
+    text = message.text or ""
+    has_video = message.video is not None
 
-    video_file_path = None
-    if message.video:
+    audio_files = []
+
+    # 📌 תמיד נקריא את הטקסט (אם קיים)
+    if text.strip():
+        full_text = f"{hebrew_time} במבזקים פלוס. {text.strip()}"
+        text_to_mp3(full_text, "output.mp3")
+        convert_to_wav("output.mp3", "output.wav")
+        audio_files.append("output.wav")
+
+    # 🎞 אם יש וידאו – נוציא את האודיו ממנו
+    if has_video:
         video_file = await message.video.get_file()
-        await video_file.download_to_drive('video.mp4')
-        convert_to_wav('video.mp4', 'video.wav')
-        merge_wav_files('text.wav', 'video.wav', 'output.wav')
-        video_file_path = 'video.mp4'
-    else:
-        os.rename('text.wav', 'output.wav')
+        await video_file.download_to_drive("video.mp4")
+        convert_to_wav("video.mp4", "video.wav")
+        audio_files.append("video.wav")
 
-    upload_to_ymot('output.wav')
+    # ⬆️ נעלה את הקבצים בסדר הנכון
+    for file in audio_files:
+        upload_to_ymot(file)
+        os.remove(file)
 
-    for f in ['output.mp3', 'text.wav', 'video.wav', 'output.wav', 'video.mp4']:
-        if os.path.exists(f):
-            os.remove(f)
+    if os.path.exists("output.mp3"):
+        os.remove("output.mp3")
+    if os.path.exists("video.mp4"):
+        os.remove("video.mp4")
 
-# הפעלת הבוט
+# ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
 keep_alive()
 
+# ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.ALL, handle_text))
-
-print("🚀 הבוט עלה! שלח טקסט עם או בלי מדיה והוא יושמע 🎧")
+app.add_handler(MessageHandler(filters.ALL, handle_message))
+print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו")
 app.run_polling()
