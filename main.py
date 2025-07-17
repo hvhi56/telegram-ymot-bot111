@@ -5,13 +5,12 @@ import requests
 import base64
 from datetime import datetime
 import pytz
-import asyncio
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
-# כתיבת קובץ מפתח Google מ־BASE64
+# 🟡 כתיבת קובץ מפתח Google מ־BASE64
 key_b64 = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_B64")
 if not key_b64:
     raise Exception("❌ משתנה GOOGLE_APPLICATION_CREDENTIALS_B64 לא מוגדר או ריק")
@@ -23,12 +22,12 @@ try:
 except Exception as e:
     raise Exception("❌ נכשל בכתיבת קובץ JSON מ־BASE64: " + str(e))
 
-# משתנים מ־Render
+# 🛠 משתנים מ־Render
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 YMOT_TOKEN = os.getenv("YMOT_TOKEN")
 YMOT_PATH = os.getenv("YMOT_PATH", "ivr2:2/")
 
-# המרת מספרים לעברית
+# 🔢 המרת מספרים לעברית
 def num_to_hebrew_words(hour, minute):
     hours_map = {
         1: "אחת", 2: "שתיים", 3: "שלוש", 4: "ארבע", 5: "חמש",
@@ -45,7 +44,7 @@ def num_to_hebrew_words(hour, minute):
         23: "עשרים ושלוש", 24: "עשרים וארבע", 25: "עשרים וחמש", 26: "עשרים ושש",
         27: "עשרים ושבע", 28: "עשרים ושמונה", 29: "עשרים ותשע", 30: "וחצי",
         31: "שלושים ואחת", 32: "שלושים ושתיים", 33: "שלושים ושלוש",
-        34: "שלושים וארבע", 35: "שלושים וחמש", 36: "שלושים ושש",
+        34: "שלושים וארבע", 35: "שלושים וחמש", 36:"שלושים ושש",
         37: "שלושים ושבע", 38: "שלושים ושמונה", 39: "שלושים ותשע",
         40: "וארבעים דקות", 41: "ארבעים ואחת", 42: "ארבעים ושתיים",
         43: "ארבעים ושלוש", 44: "ארבעים וארבע", 45: "ארבעים וחמש",
@@ -59,46 +58,40 @@ def num_to_hebrew_words(hour, minute):
     hour_12 = hour % 12 or 12
     return f"{hours_map[hour_12]} {minutes_map[minute]}"
 
-# יצירת MP3 עם Google TTS
+# 🎤 יצירת MP3 עם Google TTS
 def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
+
     synthesis_input = texttospeech.SynthesisInput(text=text)
+
     voice = texttospeech.VoiceSelectionParams(
         language_code="he-IL",
-        name="he-IL-Wavenet-B",
+        name="he-IL-Wavenet-B",  # קול גברי
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
+
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
         speaking_rate=1.2
     )
+
     response = client.synthesize_speech(
         input=synthesis_input,
         voice=voice,
         audio_config=audio_config
     )
+
     with open(filename, "wb") as out:
         out.write(response.audio_content)
 
-# המרה ל־WAV בפורמט ימות
+# 🎧 המרה ל־WAV בפורמט ימות
 def convert_to_wav(input_file, output_file='output.wav'):
     subprocess.run([
         'ffmpeg', '-i', input_file, '-ar', '8000', '-ac', '1', '-f', 'wav',
         output_file, '-y'
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ])
 
-# ✅ מיזוג שני קבצי WAV לרצף אחד – הטקסט קודם
-def merge_wav_files(wav1, wav2, output):
-    subprocess.run([
-        'ffmpeg', '-y',
-        '-i', wav1,
-        '-i', wav2,
-        '-filter_complex', '[0:0][1:0]concat=n=2:v=0:a=1[out]',
-        '-map', '[out]',
-        output
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-# העלאה לשלוחה
+# 📤 העלאה לשלוחה
 def upload_to_ymot(wav_file_path):
     url = 'https://call2all.co.il/ym/api/UploadFile'
     with open(wav_file_path, 'rb') as f:
@@ -112,41 +105,43 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# טיפול בהודעות טקסט עם או בלי מדיה
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    if not message:
-        return
-
-    text = message.text or ""
+# 🧠 פונקציה לעיבוד טקסט עם תוספת שעה
+def create_full_text(raw_text):
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
-    full_text = f"{hebrew_time} במבזקים פלוס. {text}"
+    return f"{hebrew_time} במבזקים פלוס. {raw_text}"
 
-    text_to_mp3(full_text)
-    convert_to_wav('output.mp3', 'text.wav')
+# 🤖 טיפול בכל הודעה עם טקסט או קובץ
+async def handle_message(update:עדכון, הקשר: ContextTypes.DEFAULT_TYPE):     text = message.text או message.caption        return    אם לא message:
+    message = update.message
+
+
+
+
+    if text:
+        full_text = create_full_text(text)
+        text_to_mp3(full_text, "output.mp3")
+        convert_to_wav("output.mp3", "output.wav")
+        upload_to_ymot("output.wav")
+        os.remove("output.mp3")
+        os.remove("output.wav")
 
     if message.video:
         video_file = await message.video.get_file()
-        await video_file.download_to_drive('video.mp4')
-        convert_to_wav('video.mp4', 'video.wav')
-        merge_wav_files('text.wav', 'video.wav', 'output.wav')
-    else:
-        os.rename('text.wav', 'output.wav')
+        await video_file.download_to_drive("video.mp4")
+        convert_to_wav("video.mp4", "video.wav")
+        upload_to_ymot("video.wav")
+        os.remove("video.mp4")
+        os.remove("video.wav")
 
-    upload_to_ymot('output.wav')
-
-    for f in ['output.mp3', 'text.wav', 'video.wav', 'output.wav', 'video.mp4']:
-        if os.path.exists(f):
-            os.remove(f)
-
-# הפעלת הבוט
+# ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
 keep_alive()
 
+# ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.ALL, handle_text))
+app.add_handler(MessageHandler(filters.ALL, handle_message))
 
-print("🚀 הבוט עלה! שלח טקסט עם או בלי מדיה והוא יושמע 🎧")
+print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו בטלגרם והוא יושמע בשלוחה 🎧")
 app.run_polling()
