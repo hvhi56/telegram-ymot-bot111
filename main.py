@@ -110,6 +110,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("⚠️ התקבלה הודעה ריקה – מדלג")
         return
 
+    # 📝 טקסט רגיל או caption (במקרה של מדיה)
     text = update.message.text or update.message.caption
     if not text:
         print("⚠️ אין טקסט בהודעה – מדלג")
@@ -124,7 +125,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     full_text = f"{hebrew_time} במבזקים פלוס. {text}"
 
-    # 🎤 הקראת טקסט עם TTS
+    # 🎤 קודם מקריאים את הטקסט עם Google TTS
     text_to_mp3(full_text)
     convert_to_wav('output.mp3', 'output.wav')
     upload_to_ymot('output.wav')
@@ -132,7 +133,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.remove('output.mp3')
     os.remove('output.wav')
 
-    # 🎥 אם יש וידאו – המרה ושליחה לשלוחה
+    # 🎥 רק לאחר מכן – אם יש וידאו – ממירים גם אותו
     if update.message.video:
         print("🎥 התקבל וידאו – מוריד וממיר")
 
