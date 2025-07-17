@@ -44,7 +44,7 @@ def num_to_hebrew_words(hour, minute):
         23: "עשרים ושלוש", 24: "עשרים וארבע", 25: "עשרים וחמש", 26: "עשרים ושש",
         27: "עשרים ושבע", 28: "עשרים ושמונה", 29: "עשרים ותשע", 30: "וחצי",
         31: "שלושים ואחת", 32: "שלושים ושתיים", 33: "שלושים ושלוש",
-        34: "שלושים וארבע", 35: "שלושים וחמש", 36:"שלושים ושש",
+        34: "שלושים וארבע", 35: "שלושים וחמש", 36: "שלושים ושש",
         37: "שלושים ושבע", 38: "שלושים ושמונה", 39: "שלושים ותשע",
         40: "וארבעים דקות", 41: "ארבעים ואחת", 42: "ארבעים ושתיים",
         43: "ארבעים ושלוש", 44: "ארבעים וארבע", 45: "ארבעים וחמש",
@@ -113,12 +113,12 @@ def create_full_text(raw_text):
     return f"{hebrew_time} במבזקים פלוס. {raw_text}"
 
 # 🤖 טיפול בכל הודעה עם טקסט או קובץ
-async def handle_message(update:עדכון, הקשר: ContextTypes.DEFAULT_TYPE):     text = message.text או message.caption        return    אם לא message:
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
+    if not message:
+        return
 
-
-
-
+    text = message.text or message.caption
     if text:
         full_text = create_full_text(text)
         text_to_mp3(full_text, "output.mp3")
