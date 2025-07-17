@@ -34,6 +34,7 @@ def num_to_hebrew_words(hour, minute):
         6: "שש", 7: "שבע", 8: "שמונה", 9: "תשע", 10: "עשר",
         11: "אחת עשרה", 12: "שתים עשרה"
     }
+
     minutes_map = {
         0: "אפס", 1: "ודקה", 2: "ושתי דקות", 3: "ושלוש דקות", 4: "וארבע דקות", 5: "וחמש דקות",
         6: "ושש דקות", 7: "ושבע דקות", 8: "ושמונה דקות", 9: "ותשע דקות", 10: "ועשרה",
@@ -104,65 +105,35 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# 🤖 טיפול בהודעות טקסט/וידאו מהבוט
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        print("⚠️ התקבלה הודעה ריקה – מדלג")
-        return
-
-    message = update.message
-
-    # 📝 נשלף את הטקסט - אם caption או טקסט רגיל
-    text = message.text or message.caption
-    if not text:
-        print("⚠️ אין טקסט בהודעה – מדלג")
-        return
-
-    print("✅ טקסט שהתקבל:", text)
-
-    # ⏰ שעה לפי שעון ישראל
+# 🧠 פונקציה לעיבוד טקסט עם תוספת שעה
+def create_full_text(raw_text):
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
-    full_text = f"{hebrew_time} במבזקים פלוס. {text}"
+    return f"{hebrew_time} במבזקים פלוס. {raw_text}"
 
-    # 🎤 קודם מקריאים את הטקסט עם Google TTS
-    text_to_mp3(full_text)
-    convert_to_wav('output.mp3', 'output.wav')
-    upload_to_ymot('output.wav')
-    os.remove('output.mp3')
-    os.remove('output.wav')
+# 🤖 טיפול בכל הודעה עם טקסט או קובץ
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message
+    if not message:
+        return
 
-    # 🎥 אם יש וידאו – נוריד ונמיר
+    text = message.text or message.caption
+    if text:
+        full_text = create_full_text(text)
+        text_to_mp3(full_text, "output.mp3")
+        convert_to_wav("output.mp3", "output.wav")
+        upload_to_ymot("output.wav")
+        os.remove("output.mp3")
+        os.remove("output.wav")
+
     if message.video:
-        print("🎥 התקבל וידאו – מוריד וממיר")
         video_file = await message.video.get_file()
-        video_path = "video.mp4"
-        await video_file.download_to_drive(video_path)
-
-        convert_to_wav(video_path, 'video.wav')
-        upload_to_ymot('video.wav')
-
-        os.remove(video_path)
-        os.remove('video.wav')
-
-    # 🖼 אם יש תמונה – לא עושים איתה כלום (אבל כבר הקריאו את הטקסט!)
-    if message.photo:
-        print("🖼 התקבלה תמונה – אין פעולה נדרשת (הטקסט כבר הוקרא)")
-
-    # 🎥 רק לאחר מכן – אם יש וידאו – ממירים גם אותו
-    if update.message.video:
-        print("🎥 התקבל וידאו – מוריד וממיר")
-
-        video_file = await update.message.video.get_file()
-        video_path = "video.mp4"
-        await video_file.download_to_drive(video_path)
-
-        convert_to_wav(video_path, 'video.wav')
-        upload_to_ymot('video.wav')
-
-        os.remove(video_path)
-        os.remove('video.wav')
+        await video_file.download_to_drive("video.mp4")
+        convert_to_wav("video.mp4", "video.wav")
+        upload_to_ymot("video.wav")
+        os.remove("video.mp4")
+        os.remove("video.wav")
 
 # ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
@@ -170,7 +141,7 @@ keep_alive()
 
 # ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT | filters.VIDEO, handle_text))
+app.add_handler(MessageHandler(filters.ALL, handle_message))
 
-print("🚀 הבוט עלה! שלח טקסט או וידאו והוא יושמע בשלוחה 🎧")
+print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו בטלגרם והוא יושמע בשלוחה 🎧")
 app.run_polling()
