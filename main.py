@@ -8,7 +8,12 @@ import pytz
 import asyncio
 
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder,
+    MessageHandler,
+    filters,
+    ContextTypes
+)
 from google.cloud import texttospeech
 
 # 🟡 כתיבת קובץ מפתח Google מ־BASE64
@@ -141,13 +146,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove("output.mp3")
         os.remove("output.wav")
 
+async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    post = update.channel_post
+    if not post or not post.text:
+        return
+
+    text = post.text
+    print("📡 פוסט מהערוץ:", text)
+
+    # כמו עם הודעה רגילה - צור קובץ TTS, המר, העלה וכו'
+    full_text = create_full_text(text)
+    text_to_mp3(full_text, "output.mp3")
+    convert_to_wav("output.mp3", "output.wav")
+    upload_to_ymot("output.wav")
+    os.remove("output.mp3")
+    os.remove("output.wav")
+
 # ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
 keep_alive()
 
 # ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_message))
+app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+app.add_handler(MessageHandler(filters.UpdateType.CHANNEL_POST, handle_channel_post))
 
 print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו – והוא יוקרא ויושמע בשלוחה 🎧")
 app.run_polling()
