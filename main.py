@@ -8,11 +8,7 @@ import pytz
 import asyncio
 
 from telegram import Update
-    ApplicationBuilder,
-    MessageHandler,
-    ContextTypes,
-    filters
-)
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
 # 🟡 כתיבת קובץ מפתח Google מ־BASE64
@@ -53,7 +49,7 @@ def num_to_hebrew_words(hour, minute):
         34: "ושלושים וארבע דקות", 35: "ושלושים וחמש דקות", 36: "ושלושים ושש דקות",
         37: "ושלושים ושבע דקות", 38: "ושלושים ושמונה דקות", 39: "ושלושים ותשע דקות",
         40: "וארבעים דקות", 41: "וארבעים ואחת דקות", 42: "וארבעים ושתיים דקות",
-        43: "וארבעים ושלוש דקות", 44: "וארבעים וארבע דקות", 45: "וארבעים וחמש דקות",
+        43: "וארבעים ושלוש דקות", 44: "וארבעים וארבע דקות", 45: "ושלושת רבעי",
         46: "וארבעים ושש דקות", 47: "וארבעים ושבע דקות", 48: "וארבעים ושמונה דקות",
         49: "וארבעים ותשע דקות", 50: "וחמישים דקות", 51: "וחמישים ואחת דקות",
         52: "וחמישים ושתיים דקות", 53: "וחמישים ושלוש דקות", 54: "וחמישים וארבע דקות",
@@ -118,7 +114,7 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# 📥 טיפול בהודעות פרטיות
+# 📥 טיפול בהודעות
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
     if not message:
@@ -127,7 +123,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = message.text or message.caption
     has_video = message.video is not None
 
-    # ⬅️ קודם נעלה את הווידאו
+    # ⬅️ שלב 1: קודם מעלים את הווידאו (כדי שיושמע אחרי)
     if has_video:
         video_file = await message.video.get_file()
         await video_file.download_to_drive("video.mp4")
@@ -136,7 +132,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove("video.mp4")
         os.remove("video.wav")
 
-    # ⬅️ עכשיו נעלה את הטקסט (כדי שיהיה ראשון בשלוחה)
+    # ⬅️ שלב 2: עכשיו מעלים את הטקסט (כדי שיושמע ראשון)
     if text:
         full_text = create_full_text(text)
         text_to_mp3(full_text, "output.mp3")
@@ -145,30 +141,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove("output.mp3")
         os.remove("output.wav")
 
-# 📥 טיפול בפוסטים מערוץ
-async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    post = update.channel_post
-    if not post or not post.text:
-        return
-
-    text = post.text
-    print("📡 פוסט מהערוץ:", text)
-
-    full_text = create_full_text(text)
-    text_to_mp3(full_text, "output.mp3")
-    convert_to_wav("output.mp3", "output.wav")
-    upload_to_ymot("output.wav")
-    os.remove("output.mp3")
-    os.remove("output.wav")
-
 # ♻️ שמירה על חיים (Render)
 from keep_alive import keep_alive
 keep_alive()
 
 # ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-app.add_handler(ChannelPostHandler(handle_channel_post))  # ← זה החלק החדש והמתוקן
+app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_message))
 
 print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו – והוא יוקרא ויושמע בשלוחה 🎧")
 app.run_polling()
