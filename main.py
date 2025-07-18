@@ -6,6 +6,7 @@ import base64
 from datetime import datetime
 import pytz
 import asyncio
+import re
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
@@ -59,6 +60,22 @@ def num_to_hebrew_words(hour, minute):
 
     hour_12 = hour % 12 or 12
     return f"{hours_map[hour_12]} {minutes_map[minute]}"
+
+def clean_text(text):
+    # הסרת קישורים
+    text = re.sub(r'https?://\S+', '', text)
+    text = re.sub(r'www\.\S+', '', text)
+
+    # הסרת אמוג'ים (תווים שאינם עברית, ספרות, סימני פיסוק)
+    text = re.sub(r'[^\w\s.,!?()\u0590-\u05FF]', '', text)
+
+    # הסרת הביטוי "חדשות המוקד"
+    text = text.replace("חדשות המוקד", '')
+
+    # ניקוי רווחים מיותרים
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
 
 # 🧠 יוצר טקסט מלא כולל שעה
 def create_full_text(text):
@@ -134,7 +151,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ⬅️ שלב 2: עכשיו מעלים את הטקסט (כדי שיושמע ראשון)
     if text:
-        full_text = create_full_text(text)
+        cleaned = clean_text(text)
+        full_text = create_full_text(cleaned)
         text_to_mp3(full_text, "output.mp3")
         convert_to_wav("output.mp3", "output.wav")
         upload_to_ymot("output.wav")
