@@ -62,19 +62,26 @@ def num_to_hebrew_words(hour, minute):
     return f"{hours_map[hour_12]} {minutes_map[minute]}"
 
 def clean_text(text):
+    import re
+
+    # רשימת ביטויים להסרה מהטקסט
+    BLOCKED_PHRASES = [
+        "חדשות המוקד",
+        "חדשות המוקד • בטלגרם: t.me/hamoked_il",
+        "בוואטסאפ: https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7"
+        "לעדכוני הפרגוד בטלגרם"
+    ]
+
+    # הסרת ביטויים קבועים
+    for phrase in BLOCKED_PHRASES:
+        text = text.replace(phrase, '')
+
     # הסרת קישורים
     text = re.sub(r'https?://\S+', '', text)
     text = re.sub(r'www\.\S+', '', text)
 
-    # הסרת אמוג'ים (תווים שאינם עברית, ספרות, סימני פיסוק)
+    # הסרת אמוג'ים (תווים שאינם אותיות, ספרות, סימני פיסוק או עברית)
     text = re.sub(r'[^\w\s.,!?()\u0590-\u05FF]', '', text)
-
-    # הסרת הביטוי "חדשות המוקד"
-    text = text.replace("חדשות המוקד", '')
-
-    # הסרת הביטוי "בסוף"
-    text = text.replace("חדשות המוקד • בטלגרם: t.me/hamoked_il
-בוואטסאפ: https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7", '')
 
     # ניקוי רווחים מיותרים
     text = re.sub(r'\s+', ' ', text).strip()
