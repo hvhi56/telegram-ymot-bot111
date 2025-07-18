@@ -8,10 +8,8 @@ import pytz
 import asyncio
 
 from telegram import Update
-from telegram.ext import (
     ApplicationBuilder,
     MessageHandler,
-    ChannelPostHandler,
     ContextTypes,
     filters
 )
