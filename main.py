@@ -67,9 +67,11 @@ def clean_text(text):
     # רשימת ביטויים להסרה מהטקסט
 BLOCKED_PHRASES = [
     "חדשות המוקד",
+    "לעדכוני הפרגוד בטלגרם",
+    "בטלגרם",
+    "t.me/hamoked_il",
     "חדשות המוקד • בטלגרם: t.me/hamoked_il",
     "בוואטסאפ: https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7",
-    "לעדכוני הפרגוד בטלגרם"
 ]
 
     # הסרת ביטויים קבועים
