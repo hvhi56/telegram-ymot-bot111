@@ -9,6 +9,7 @@ import asyncio
 import re
 
 from telegram import Update
+from telegram.ext import ChannelPostHandler
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
@@ -185,6 +186,6 @@ app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(ChannelPostHandler(handle_message))
 app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_message))
 
-print("🚀 הבוט מאזין לערוץ @MKJDXNKX – כל הודעה תועלה לשלוחה 🎧")
+print("🚀 הבוט מאזין לערוץ @mivzakimplus – כל הודעה תועלה לשלוחה 🎧")
 app.run_polling()
 
