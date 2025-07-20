@@ -72,6 +72,11 @@ def clean_text(text):
         "חדשות המוקד",
         "@New_security8200",
         "חדשות 8200 בטלגרם",
+        "@N12chat",
+        "מבזקן 12",
+        "לכל העדכונים, ולכתבות נוספות הצטרפו לערוץ דרך הקישור",
+        "https://t.me/yediyot_bnei_brak",
+        "להצטרפות מלאה לקבוצה לחצו על הצטרף",
     ], key=len, reverse=True)
 
     for phrase in BLOCKED_PHRASES:
@@ -154,7 +159,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ❗️ דילוג על הודעות עם קישורים לא מאושרים
     ALLOWED_LINKS = [
         "t.me/hamoked_il",
-        "https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7"
+        "https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7",
+        "https://t.me/yediyot_bnei_brak",
     ]
     if any(re.search(r'https?://\S+|www\.\S+', part) for part in text.split()):
         if not any(link in text for link in ALLOWED_LINKS):
