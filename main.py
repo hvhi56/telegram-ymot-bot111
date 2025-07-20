@@ -176,9 +176,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 from keep_alive import keep_alive
 keep_alive()
 
+from telegram.ext import ChannelPostHandler
+
 # ▶️ הפעלת הבוט
 app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+# האנדלר להודעות מהערוץ בלבד
+app.add_handler(ChannelPostHandler(handle_message))
 app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_message))
 
-print("🚀 הבוט עלה! שלח טקסט, תמונה או וידאו – והוא יוקרא ויושמע בשלוחה 🎧")
+print("🚀 הבוט מאזין לערוץ @MKJDXNKX – כל הודעה תועלה לשלוחה 🎧")
 app.run_polling()
+
