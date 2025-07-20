@@ -9,13 +9,7 @@ import asyncio
 import re
 
 from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    MessageHandler,
-    filters,
-    ContextTypes,
-    TypeHandler  # ✅ תומך ב־Update כולל channel_post
-)
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from google.cloud import texttospeech
 
 # 🟡 כתיבת קובץ מפתח Google מ־BASE64
@@ -67,8 +61,8 @@ def num_to_hebrew_words(hour, minute):
     hour_12 = hour % 12 or 12
     return f"{hours_map[hour_12]} {minutes_map[minute]}"
 
-# 🧹 ניקוי טקסט מהודעות
 def clean_text(text):
+    # רשימת ביטויים להסרה מהטקסט - מהארוך לקצר
     BLOCKED_PHRASES = sorted([
         "חדשות המוקד • בטלגרם: t.me/hamoked_il",
         "בוואטסאפ: https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7",
@@ -81,41 +75,51 @@ def clean_text(text):
     for phrase in BLOCKED_PHRASES:
         text = text.replace(phrase, '')
 
+    # הסרת קישורים
     text = re.sub(r'https?://\S+', '', text)
     text = re.sub(r'www\.\S+', '', text)
+
+    # הסרת אמוג'ים
     text = re.sub(r'[^\w\s.,!?()\u0590-\u05FF]', '', text)
+
+    # ניקוי רווחים
     text = re.sub(r'\s+', ' ', text).strip()
+
     return text
 
-# 🧠 יוצר טקסט כולל שעה
+# 🧠 יוצר טקסט מלא כולל שעה
 def create_full_text(text):
     tz = pytz.timezone('Asia/Jerusalem')
     now = datetime.now(tz)
     hebrew_time = num_to_hebrew_words(now.hour, now.minute)
     return f"{hebrew_time} במבזקים-פלוס. {text}"
 
-# 🎤 יצירת MP3 מ־Google TTS
+# 🎤 יצירת MP3 עם Google TTS
 def text_to_mp3(text, filename='output.mp3'):
     client = texttospeech.TextToSpeechClient()
     synthesis_input = texttospeech.SynthesisInput(text=text)
+
     voice = texttospeech.VoiceSelectionParams(
         language_code="he-IL",
         name="he-IL-Wavenet-B",
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
+
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
         speaking_rate=1.2
     )
+
     response = client.synthesize_speech(
         input=synthesis_input,
         voice=voice,
         audio_config=audio_config
     )
+
     with open(filename, "wb") as out:
         out.write(response.audio_content)
 
-# 🎧 המרה ל־WAV
+# 🎧 המרה ל־WAV בפורמט ימות
 def convert_to_wav(input_file, output_file='output.wav'):
     subprocess.run([
         'ffmpeg', '-i', input_file, '-ar', '8000', '-ac', '1', '-f', 'wav',
@@ -136,15 +140,26 @@ def upload_to_ymot(wav_file_path):
         response = requests.post(url, data=data, files=files)
     print("📞 תגובת ימות:", response.text)
 
-# 📥 טיפול בהודעות כולל channel_post
+# 📥 טיפול בהודעות מערוץ
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message or update.channel_post
+    message = update.channel_post
     if not message:
         return
 
     text = message.text or message.caption
     has_video = message.video is not None
 
+    # ❗️ דילוג על הודעות עם קישורים לא מאושרים
+    ALLOWED_LINKS = [
+        "t.me/hamoked_il",
+        "https://chat.whatsapp.com/LoxVwdYOKOAH2y2kaO8GQ7"
+    ]
+    if any(re.search(r'https?://\S+|www\.\S+', part) for part in text.split()):
+        if not any(link in text for link in ALLOWED_LINKS):
+            print("⛔️ קישור לא מאושר – ההודעה לא תועלה לשלוחה.")
+            return
+
+    # ⬅️ שלב 1: קודם מעלים את הווידאו
     if has_video:
         video_file = await message.video.get_file()
         await video_file.download_to_drive("video.mp4")
@@ -153,6 +168,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove("video.mp4")
         os.remove("video.wav")
 
+    # ⬅️ שלב 2: אחר כך מעלים את הטקסט
     if text:
         cleaned = clean_text(text)
         full_text = create_full_text(cleaned)
@@ -166,8 +182,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 from keep_alive import keep_alive
 keep_alive()
 
-# ▶️ הפעלת הבוט
+# ▶️ הפעלת האפליקציה
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(TypeHandler(Update, handle_message))  # ✅ תומך גם בהודעות מערוצים
-print("🚀 הבוט עלה! כל הודעה בערוץ תעלה לשלוחה 🎧")
+app.add_handler(MessageHandler(filters.UpdateType.CHANNEL_POST, handle_message))
+
+print("🚀 הבוט מאזין לערוץ ומעלה לשלוחה 🎧")
 app.run_polling()
