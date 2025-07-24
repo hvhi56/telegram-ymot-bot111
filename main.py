@@ -74,6 +74,16 @@ def clean_text(text):
         "חדשות 8200 בטלגרם",
         "@N12chat",
         "מבזקן 12",
+        "קטינות",
+        "מיניות",
+        "גיי",
+        "להט"ב",
+        "להטב",
+        "להטבים",
+        "מינית",
+        "בקטינה",
+        "קטינה",
+        "מעשה מגונה",
         "לכל העדכונים, ולכתבות נוספות הצטרפו לערוץ דרך הקישור",
         "https://t.me/yediyot_bnei_brak",
         "להצטרפות מלאה לקבוצה לחצו על הצטרף",
@@ -108,7 +118,7 @@ def text_to_mp3(text, filename='output.mp3'):
 
     voice = texttospeech.VoiceSelectionParams(
         language_code="he-IL",
-        name="he-IL-Wavenet-B",
+        name="he-IL-Wavenet-D",
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
 
