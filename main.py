@@ -123,7 +123,7 @@ def text_to_mp3(text, filename='output.mp3'):
 
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=1.2
+        speaking_rate=1.3
     )
 
     response = client.synthesize_speech(
