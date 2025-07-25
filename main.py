@@ -83,6 +83,7 @@ def clean_text(text):
         "בקטינה",
         "קטינה",
         "מעשה מגונה",
+        "האח הגדול",
         "לכל העדכונים, ולכתבות נוספות הצטרפו לערוץ דרך הקישור",
         "https://t.me/yediyot_bnei_brak",
         "להצטרפות מלאה לקבוצה לחצו על הצטרף",
@@ -117,7 +118,7 @@ def text_to_mp3(text, filename='output.mp3'):
 
     voice = texttospeech.VoiceSelectionParams(
         language_code="he-IL",
-        name="he-IL-Wavenet-D",
+        name="he-IL-Wavenet-B",
         ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
 
