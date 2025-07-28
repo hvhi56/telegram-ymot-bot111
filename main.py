@@ -7,6 +7,7 @@ from datetime import datetime
 import pytz
 import asyncio
 import re
+from difflib import SequenceMatcher  # ✅ חדש
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
@@ -14,7 +15,7 @@ from google.cloud import texttospeech
 
 # 📁 קובץ לשמירת היסטוריית הודעות
 LAST_MESSAGES_FILE = "last_messages.json"
-MAX_HISTORY = 10
+MAX_HISTORY = 15  # ✅ שונה מ־10 ל־15
 
 def load_last_messages():
     if not os.path.exists(LAST_MESSAGES_FILE):
@@ -88,12 +89,20 @@ def clean_text(text):
         "חדשות 8200 בטלגרם",
         "@N12chat",
         "מבזקן 12",
-        "קטינות", "מיניות", "גיי", "להטב", "להטבים",
-        "מינית", "בקטינה", "קטינה", "מעשה מגונה", "באח הגדול",
         "לכל העדכונים, ולכתבות נוספות הצטרפו לערוץ דרך הקישור",
         "https://t.me/yediyot_bnei_brak",
         "להצטרפות מלאה לקבוצה לחצו על הצטרף",
     ], key=len, reverse=True)
+
+    BANNED_PHRASES = [
+        "באח הגדול", "להטב", "להטבים", "להט\"ב", "להטב״ים", "להטביים",
+        "גיי", "עבירות", "קטינה", "קטינות", "בקטינה", "מינית", "מיניות", "מעשה מגונה"
+    ]
+
+    for banned in BANNED_PHRASES:
+        if banned in text:
+            print(f"⛔️ הודעה מכילה מילה אסורה ('{banned}') – לא תועלה לשלוחה.")
+            return None
 
     for phrase in BLOCKED_PHRASES:
         text = text.replace(phrase, '')
@@ -164,7 +173,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print("⛔️ קישור לא מאושר – ההודעה לא תועלה לשלוחה.")
             return
 
-    # שלב 1: מדיה (וידאו / אודיו)
     if has_video:
         video_file = await message.video.get_file()
         await video_file.download_to_drive("video.mp4")
@@ -181,15 +189,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove("audio.ogg")
         os.remove("media.wav")
 
-    # שלב 2: טקסט
     if text:
         cleaned = clean_text(text)
+        if cleaned is None:
+            return  # הודעה אסורה – לא ממשיכים
 
-        # מניעת כפילויות
         last_messages = load_last_messages()
-        if cleaned in last_messages:
-            print("⏩ הודעה כפולה – לא תועלה שוב לשלוחה.")
-            return
+        for previous in last_messages:
+            similarity = SequenceMatcher(None, cleaned, previous).ratio()
+            if similarity >= 0.8:  # ✅ סף דמיון 80%
+                print(f"⏩ הודעה דומה מדי להודעה קודמת ({similarity*100:.1f}%) – לא תועלה לשלוחה.")
+                return
         last_messages.append(cleaned)
         save_last_messages(last_messages)
 
